@@ -83,3 +83,25 @@ Some things I eventually want to fix/change (In no specific order)
 8. Maybe on a load also store into the stage and mark it somehow
 9. Update the widths. (truncated to 8b)
 10. Better testing suite
+
+Ok Let me think about how I want to do this test bench for Version2
+
+I should probably make a memory class
+members should be the dictionary
+and functions can be
+
+1. init
+2. Like a range check probably (valid loads and stores)
+3. Single reads/ writes
+4. Array reads/writes
+
+What else do I want
+I definitely want a matrix generation class
+Members should be rows, cols, and vals (in a list)
+
+Also want a instruction generator thing. This will be used to loop through as like a pseudo program
+So like I can pass an array through and it will loop through each instruction and execute it
+
+Probably want something that will print/log A/B/C/spads/whatevers
+
+Also going to want a single function that will run an entire instruction based on the specific instruction. I think. Allow me to ponder for a little bit longer...
