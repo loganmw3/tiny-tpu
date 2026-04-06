@@ -1,6 +1,6 @@
 <testsuites name="results">
   <testsuite name="all" package="all">
-    <property name="random_seed" value="1775240531" />
-    <testcase name="test_gemm_8x8_8bit_input_32bit_output" classname="test_gemm" file="/Users/loganwonnacott/Desktop/tiny-tpu/tests/test_gemm.py" lineno="144" time="0.027863025665283203" sim_time_ns="10280.0" ratio_time="368947.72748275805" />
+    <property name="random_seed" value="1775511679" />
+    <testcase name="test_custom" classname="test_custom" file="/Users/loganwonnacott/Desktop/tiny-tpu/tests/test_custom.py" lineno="29" time="0.009335041046142578" sim_time_ns="5780.0" ratio_time="619172.4247841855" />
   </testsuite>
 </testsuites>

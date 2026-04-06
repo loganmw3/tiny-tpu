@@ -33,3 +33,6 @@ test_store:
 
 test_gemm:
 	$(MAKE) --no-print-directory sim COCOTB_TEST_MODULES=test_gemm
+
+test_custom:
+	$(MAKE) --no-print-directory sim COCOTB_TEST_MODULES=test_custom
