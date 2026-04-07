@@ -3,7 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from helpers.isa import encode_config, encode_gemm, encode_load, encode_store
-from helpers.memory import memory_read, memory_write
+from helpers.memory import Memory
 
 async def start_clock(dut, period=10):
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
@@ -79,8 +79,9 @@ async def run_gemm(dut, spad_a: int, spad_b: int, spad_c: int, timeout=2500):
     await RisingEdge(dut.clk)
 
 
-async def run_store(dut, target_spad: int, written_memory: dict[int, int], timeout=1500):
+async def run_store(dut, target_spad: int, memory: Memory, timeout=1500):
     dut.instruction.value = encode_store(target_spad)
+    written_memory = memory.memory
 
     for _ in range(timeout):
         await RisingEdge(dut.clk)

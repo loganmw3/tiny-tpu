@@ -2,17 +2,9 @@ import cocotb
 from random import randint
 
 from helpers.tb_helper import start_clock, reset_dut
-from helpers.memory import memory_init, memory_read_array, memory_write_array
+from helpers.memory import Memory
 from helpers.matrix import gen_matrix
 from helpers.tb_helper import run_config, run_load, run_gemm, run_store
-
-# import cocotb
-# from random import randint
-
-# from helpers.tb_helper import start_clock, reset_dut
-# from helpers.memory import memory_init, memory_read_array, memory_write_array
-# from helpers.matrix import gen_matrix
-# from helpers.tb_helper import run_config, run_load, run_gemm, run_store
 
 
 def matmul(A, B, m, n, p):
@@ -28,9 +20,8 @@ def matmul(A, B, m, n, p):
 
 @cocotb.test()
 async def test_custom(dut):
-    memory = {}
     mem_length = 4096
-    memory_init(memory, mem_length)
+    mem = Memory(mem_length)
 
     # Init
     m = randint(1, 8)
@@ -40,8 +31,8 @@ async def test_custom(dut):
     A = gen_matrix(m, n)
     B = gen_matrix(n, p)
 
-    memory_write_array(memory, 0x100, A)
-    memory_write_array(memory, 0x200, B)
+    mem.write_array(0x100, A)
+    mem.write_array(0x200, B)
 
     await start_clock(dut)
     await reset_dut(dut)
@@ -50,14 +41,14 @@ async def test_custom(dut):
     await run_config(dut, 1, 0x200, n, p)
     await run_config(dut, 2, 0x300, m, p)
 
-    await run_load(dut, 0, memory)
-    await run_load(dut, 1, memory)
+    await run_load(dut, 0, mem.memory)
+    await run_load(dut, 1, mem.memory)
 
     await run_gemm(dut, 0, 1, 2)
 
-    await run_store(dut, 2, memory)
+    await run_store(dut, 2, mem)
 
-    dut_C = memory_read_array(memory, 0x300, m * p)
+    dut_C = mem.read_array(0x300, m * p)
     golden_C = matmul(A, B, m, n, p)
 
     print("m, n, p =", m, n, p)
