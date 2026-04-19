@@ -20,28 +20,37 @@ def matmul(A, B, m, n, p):
 
 @cocotb.test()
 async def test_custom(dut):
-    mem_length = 4096
+    mem_length = 1000000
     mem = Memory(mem_length)
 
-    t = 5
+    t = 10
     for _ in range(0, t):
         # Init
-        m = randint(1, 16)
-        n = randint(1, 16)
-        p = randint(1, 16)
+        # m = Rows
+        # n = K
+        # p = Cols
+        # m = randint(1, 16)  # Rows
+        # n = randint(17, 32) # K
+        # p = randint(1, 16)  # Cols
+        m = 1  # Row
+        n = 28*28 # K
+        p = 10 # Col
+        # m = 64
+        # n = 64
+        # p = 64
 
         A = gen_matrix(m, n)
         B = gen_matrix(n, p)
 
-        mem.write_array(0x100, A)
-        mem.write_array(0x200, B)
+        mem.write_array(0x1000, A)
+        mem.write_array(0x2000, B)
 
         await start_clock(dut)
         await reset_dut(dut)
 
-        await run_config(dut, 0, 0x100, m, n)
-        await run_config(dut, 1, 0x200, n, p)
-        await run_config(dut, 2, 0x300, m, p)
+        await run_config(dut, 0, 0x1000, m, n)
+        await run_config(dut, 1, 0x2000, n, p)
+        await run_config(dut, 2, 0x3000, m, p)
 
         await run_load(dut, 0, mem.memory)
         await run_load(dut, 1, mem.memory)
@@ -50,7 +59,7 @@ async def test_custom(dut):
 
         await run_store(dut, 2, mem)
 
-        dut_C = mem.read_array(0x300, m * p)
+        dut_C = mem.read_array(0x3000, m * p)
         golden_C = matmul(A, B, m, n, p)
 
         print("m, n, p =", m, n, p)

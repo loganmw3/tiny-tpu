@@ -2,10 +2,10 @@ module tpu
 import types::*;
 #(
     parameter NUM_SPADS      = 8,
-    parameter SPAD_DEPTH     = 256,
-    parameter ARRAY_DIM_ROWS = 16,
-    parameter ARRAY_DIM_COLS = 16,
-    parameter ARRAY_K_DIM    = 16
+    parameter SPAD_DEPTH     = 8192,
+    parameter ARRAY_DIM_ROWS = 1,
+    parameter ARRAY_K_DIM    = 784,
+    parameter ARRAY_DIM_COLS = 10
 )(
     input  logic clk,
     input  logic rst,
@@ -32,6 +32,9 @@ localparam SPAD_WORD_WIDTH = 32;
 localparam ROW_IDX_W = (ARRAY_DIM_ROWS > 1) ? $clog2(ARRAY_DIM_ROWS) : 1;
 localparam COL_IDX_W = (ARRAY_DIM_COLS > 1) ? $clog2(ARRAY_DIM_COLS) : 1;
 localparam K_IDX_W   = (ARRAY_K_DIM > 1)    ? $clog2(ARRAY_K_DIM)    : 1;
+
+localparam DIM_WIDTH = 10;
+localparam COUNT_WIDTH = 2*DIM_WIDTH;
 
 // States
 localparam IDLE            = 0;
@@ -84,10 +87,10 @@ spad_meta_t                   meta_mem_rdata;
 // Shared LOAD / STORE regs
 logic [$clog2(NUM_SPADS)-1:0] load_spad_reg;
 logic [31:0]                  load_ptr_reg;
-logic [7:0]                   load_rows_reg;
-logic [7:0]                   load_cols_reg;
-logic [15:0]                  load_total_reg;
-logic [15:0]                  load_idx_reg;
+logic [DIM_WIDTH-1:0]         load_rows_reg;
+logic [DIM_WIDTH-1:0]         load_cols_reg;
+logic [COUNT_WIDTH-1:0]       load_total_reg;
+logic [COUNT_WIDTH-1:0]       load_idx_reg;
 logic [31:0]                  load_data_reg;
 
 // Scratchpad interface
@@ -107,17 +110,17 @@ logic [$clog2(NUM_SPADS)-1:0] gemm_spad_b_reg;
 logic [$clog2(NUM_SPADS)-1:0] gemm_spad_c_reg;
 
 logic [31:0] gemm_a_ptr_reg, gemm_b_ptr_reg, gemm_c_ptr_reg;
-logic [7:0]  gemm_a_rows_reg, gemm_a_cols_reg;
-logic [7:0]  gemm_b_rows_reg, gemm_b_cols_reg;
-logic [7:0]  gemm_c_rows_reg, gemm_c_cols_reg;
+logic [DIM_WIDTH-1:0] gemm_a_rows_reg, gemm_a_cols_reg;
+logic [DIM_WIDTH-1:0] gemm_b_rows_reg, gemm_b_cols_reg;
+logic [DIM_WIDTH-1:0] gemm_c_rows_reg, gemm_c_cols_reg;
 
-logic [7:0]  gemm_M_reg, gemm_N_reg, gemm_K_reg;
+logic [DIM_WIDTH-1:0] gemm_M_reg, gemm_N_reg, gemm_K_reg;
 
 logic [1:0]  gemm_meta_phase_reg;
 logic [1:0]  gemm_load_phase_reg;
-logic [15:0] gemm_idx_reg;
-logic [7:0]  gemm_t_reg;
-logic [15:0] gemm_store_idx_reg;
+logic [COUNT_WIDTH-1:0] gemm_idx_reg;
+logic [DIM_WIDTH-1:0] gemm_t_reg;
+logic [COUNT_WIDTH-1:0] gemm_store_idx_reg;
 logic [31:0] gemm_spad_data_reg;
 
 // Stage buffers
@@ -136,27 +139,27 @@ logic [COL_IDX_W-1:0] gemm_store_col_idx;
 // Systolic array interface
 logic        sys_start;
 logic        sys_valid;
-logic [7:0]  sys_a_row [0:ARRAY_DIM_ROWS-1];
-logic [7:0]  sys_b_col [0:ARRAY_DIM_COLS-1];
-logic [31:0] sys_c     [0:ARRAY_DIM_ROWS-1][0:ARRAY_DIM_COLS-1];
+logic [ARRAY_DIM_ROWS-1:0][7:0] sys_a_row;
+logic [ARRAY_DIM_COLS-1:0][7:0] sys_b_col;
+logic [ARRAY_DIM_ROWS-1:0][ARRAY_DIM_COLS-1:0][31:0] sys_c;
 logic        sys_done;
 
 // Helper index logic
-logic [15:0] gemm_a_row_idx_full;
-logic [15:0] gemm_a_col_idx_full;
-logic [15:0] gemm_b_row_idx_full;
-logic [15:0] gemm_b_col_idx_full;
-logic [15:0] gemm_store_row_idx_full;
-logic [15:0] gemm_store_col_idx_full;
+logic [COUNT_WIDTH-1:0] gemm_a_row_idx_full;
+logic [COUNT_WIDTH-1:0] gemm_a_col_idx_full;
+logic [COUNT_WIDTH-1:0] gemm_b_row_idx_full;
+logic [COUNT_WIDTH-1:0] gemm_b_col_idx_full;
+logic [COUNT_WIDTH-1:0] gemm_store_row_idx_full;
+logic [COUNT_WIDTH-1:0] gemm_store_col_idx_full;
 
-assign gemm_a_row_idx_full     = gemm_idx_reg       / {8'd0, gemm_a_cols_reg};
-assign gemm_a_col_idx_full     = gemm_idx_reg       % {8'd0, gemm_a_cols_reg};
+assign gemm_a_row_idx_full     = gemm_idx_reg / COUNT_WIDTH'(gemm_a_cols_reg);
+assign gemm_a_col_idx_full     = gemm_idx_reg % COUNT_WIDTH'(gemm_a_cols_reg);
 
-assign gemm_b_row_idx_full     = gemm_idx_reg       / {8'd0, gemm_b_cols_reg};
-assign gemm_b_col_idx_full     = gemm_idx_reg       % {8'd0, gemm_b_cols_reg};
+assign gemm_b_row_idx_full     = gemm_idx_reg / COUNT_WIDTH'(gemm_b_cols_reg);
+assign gemm_b_col_idx_full     = gemm_idx_reg % COUNT_WIDTH'(gemm_b_cols_reg);
 
-assign gemm_store_row_idx_full = gemm_store_idx_reg / {8'd0, gemm_c_cols_reg};
-assign gemm_store_col_idx_full = gemm_store_idx_reg % {8'd0, gemm_c_cols_reg};
+assign gemm_store_row_idx_full = gemm_store_idx_reg / COUNT_WIDTH'(gemm_c_cols_reg);
+assign gemm_store_col_idx_full = gemm_store_idx_reg % COUNT_WIDTH'(gemm_c_cols_reg);
 
 assign gemm_a_row_idx     = gemm_a_row_idx_full[ROW_IDX_W-1:0];
 assign gemm_a_col_idx     = gemm_a_col_idx_full[K_IDX_W-1:0];
@@ -314,7 +317,7 @@ always_ff @(posedge clk) begin : state_machine_ff
         end
 
         if (state == GEMM_START) begin
-            gemm_t_reg <= 8'd0;
+            gemm_t_reg <= '0;
         end else if (state == GEMM_RUN) begin
             gemm_t_reg <= gemm_t_reg + 1'b1;
         end
@@ -384,9 +387,9 @@ always_comb begin : state_machine_comb
         CONFIGURE: begin
             meta_mem_wen         = 1'b1;
             meta_mem_waddr       = instruction[58:56];
-            meta_mem_wdata.ptr   = instruction[47:16];
-            meta_mem_wdata.rows  = instruction[15:8];
-            meta_mem_wdata.cols  = instruction[7:0];
+            meta_mem_wdata.rows  = instruction[55:46];
+            meta_mem_wdata.cols  = instruction[45:36];
+            meta_mem_wdata.ptr   = instruction[35:4];
             meta_mem_wdata.valid = 1'b1;
             state_next           = COMMIT;
         end
@@ -502,14 +505,14 @@ always_comb begin : state_machine_comb
                 if ((i < gemm_M_reg) && (i == 0) && (0 < gemm_K_reg))
                     sys_a_row[i] = stage_a[i][0];
                 else
-                    sys_a_row[i] = 8'd0;
+                    sys_a_row[i] = '0;
             end
 
             for (integer j = 0; j < ARRAY_DIM_COLS; j = j + 1) begin
                 if ((j < gemm_N_reg) && (j == 0) && (0 < gemm_K_reg))
                     sys_b_col[j] = stage_b[0][j];
                 else
-                    sys_b_col[j] = 8'd0;
+                    sys_b_col[j] = '0;
             end
 
             state_next = GEMM_RUN;
@@ -519,8 +522,9 @@ always_comb begin : state_machine_comb
             sys_valid = 1'b1;
 
             for (integer i = 0; i < ARRAY_DIM_ROWS; i = i + 1) begin
-                logic [7:0] i_u8;
-                logic [7:0] a_idx_full;
+                logic [DIM_WIDTH-1:0] i_u8;
+                logic [COUNT_WIDTH-1:0] a_idx_full;
+
                 logic [K_IDX_W-1:0] a_idx;
 
                 i_u8 = i[7:0];
@@ -530,12 +534,12 @@ always_comb begin : state_machine_comb
                 if ((i_u8 < gemm_M_reg) && (gemm_t_reg >= i_u8) && (a_idx_full < gemm_K_reg))
                     sys_a_row[i] = stage_a[i][a_idx];
                 else
-                    sys_a_row[i] = 8'd0;
+                    sys_a_row[i] = '0;
             end
 
             for (integer j = 0; j < ARRAY_DIM_COLS; j = j + 1) begin
-                logic [7:0] j_u8;
-                logic [7:0] b_idx_full;
+                logic [DIM_WIDTH-1:0] j_u8;
+                logic [COUNT_WIDTH-1:0] b_idx_full;
                 logic [K_IDX_W-1:0] b_idx;
 
                 j_u8 = j[7:0];
@@ -545,7 +549,7 @@ always_comb begin : state_machine_comb
                 if ((j_u8 < gemm_N_reg) && (gemm_t_reg >= j_u8) && (b_idx_full < gemm_K_reg))
                     sys_b_col[j] = stage_b[b_idx][j];
                 else
-                    sys_b_col[j] = 8'd0;
+                    sys_b_col[j] = '0;
             end
 
             if (gemm_t_reg + 1 >= (gemm_K_reg + gemm_M_reg + gemm_N_reg - 2))
@@ -622,6 +626,7 @@ scratchpad #(
 );
 
 systolic_array #(
+    .M(ARRAY_DIM_ROWS),
     .N(ARRAY_DIM_COLS),
     .K(ARRAY_K_DIM)
 ) sys_arr (
