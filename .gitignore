@@ -1,4 +1,4 @@
 sim/sim_build/
 sim/dump.vcd
 sim/results.xml
-MNIST/
+MNIST/sim/*.vcd
