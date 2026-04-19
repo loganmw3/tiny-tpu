@@ -1,4 +1,5 @@
 module systolic_array#(
+    parameter M = 8,
     parameter N = 8,
     parameter K = 8
 )(
@@ -8,14 +9,14 @@ module systolic_array#(
     input  logic start,
     input  logic valid,
 
-    input  logic unsigned [7:0] a_row [N],
-    input  logic unsigned [7:0] b_col [N],
+    input  logic [M-1:0][7:0] a_row,
+    input  logic [N-1:0][7:0] b_col,
+    output logic [M-1:0][N-1:0][31:0] c,
 
-    output logic unsigned [31:0] c [N][N],
     output logic done
 );
-    localparam cycles = K + 2 * (N - 1);
-    logic [$clog2(cycles):0] ctr;
+    localparam int CYCLES = K + M + N - 2;
+    logic [$clog2(CYCLES + 1):0] ctr;
 
     logic clear_acc;
     logic en_acc;
@@ -33,7 +34,7 @@ module systolic_array#(
             end else if (ctr != 'd0) begin
                 ctr <= ctr + 'd1;
 
-                if (ctr == cycles) begin
+                if (ctr == CYCLES) begin
                     done <= 'd1;
                     ctr  <= 'd0;
                 end
@@ -45,11 +46,11 @@ module systolic_array#(
     assign en_acc    = valid;
 
     // internal forwarding wires
-    logic unsigned [7:0] a_connects [N][N];
-    logic unsigned [7:0] b_connects [N][N];
+    logic unsigned [7:0] a_connects [M][N];
+    logic unsigned [7:0] b_connects [M][N];
 
-    generate 
-        for (genvar i = 0; i < N; i++) begin : rows_body
+    generate
+        for (genvar i = 0; i < M; i++) begin : rows_body
             for (genvar j = 0; j < N; j++) begin : cols_body
                 mac mac_grid (
                     .clk   (clk),
