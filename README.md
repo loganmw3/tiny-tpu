@@ -105,3 +105,24 @@ So like I can pass an array through and it will loop through each instruction an
 Probably want something that will print/log A/B/C/spads/whatevers
 
 Also going to want a single function that will run an entire instruction based on the specific instruction. I think. Allow me to ponder for a little bit longer...
+
+ISA 2.0
+CONFIG:
+[63:59] opcode
+[58:56] target scratchpad
+[55:46] rows (10 bits)
+[45:36] cols (10 bits)
+[35:4] pointer (32 bits)
+[3:0] reserved
+
+LOAD/STORE
+[63:59] opcode
+[58:56] target scratchpad
+[55:0] everything else reserved
+
+GEMM
+[63:59] opcode
+[58:56] src A
+[55:53] src B
+[52:50] dst C
+[49:0] reserved
