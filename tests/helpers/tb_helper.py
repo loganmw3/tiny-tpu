@@ -38,7 +38,7 @@ async def run_config(dut, target_spad: int, ptr: int, rows: int, cols: int):
     await RisingEdge(dut.clk)
 
 
-async def run_load(dut, target_spad: int, memory: dict[int, int], timeout=1200):
+async def run_load(dut, target_spad: int, memory: dict[int, int], timeout=120000):
     dut.instruction.value = encode_load(target_spad)
 
     for _ in range(timeout):
@@ -62,7 +62,7 @@ async def run_load(dut, target_spad: int, memory: dict[int, int], timeout=1200):
     await RisingEdge(dut.clk)
 
 
-async def run_gemm(dut, spad_a: int, spad_b: int, spad_c: int, timeout=2500):
+async def run_gemm(dut, spad_a: int, spad_b: int, spad_c: int, timeout=250000):
     dut.instruction.value = encode_gemm(spad_a, spad_b, spad_c)
 
     for cyc in range(timeout):
@@ -79,7 +79,7 @@ async def run_gemm(dut, spad_a: int, spad_b: int, spad_c: int, timeout=2500):
     await RisingEdge(dut.clk)
 
 
-async def run_store(dut, target_spad: int, memory: Memory, timeout=1500):
+async def run_store(dut, target_spad: int, memory: Memory, timeout=150000):
     dut.instruction.value = encode_store(target_spad)
     written_memory = memory.memory
 

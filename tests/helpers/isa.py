@@ -33,9 +33,9 @@ def encode_config(target_spad: int, ptr: int, rows: int, cols: int) -> int:
     return (
         (OPCODE_CONFIG << 59)
         | ((target_spad & 0x7) << 56)
-        | ((ptr & 0xFFFFFFFF) << 16)
-        | ((rows & 0xFF) << 8)
-        | (cols & 0xFF)
+        | ((rows & 0x3FF) << 46)
+        | ((cols & 0x3FF) << 36)
+        | ((ptr & 0xFFFFFFFF) << 4)
     )
 
 
